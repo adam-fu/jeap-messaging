@@ -1,0 +1,9 @@
+@namespace("ch.admin.test")
+protocol UnusedImportTestRecordWithTab {
+  import idl "UnusedImportTestUnused.avdl";
+
+  record	UnusedImportTestRecordWithTabEvent {
+    UnusedImportTestUnusedReferences references;
+    string domainEventVersion;
+  }
+}

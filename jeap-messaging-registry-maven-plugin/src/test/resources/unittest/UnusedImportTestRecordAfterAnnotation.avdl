@@ -1,0 +1,6 @@
+@namespace("ch.admin.test")
+protocol UnusedImportTestRecordAfterAnnotation {
+  import idl "UnusedImportTestUnused.avdl";
+
+  @namespace("ch.admin.test") record UnusedImportTestRecordAfterAnnotationEvent { UnusedImportTestUnusedReferences references; }
+}

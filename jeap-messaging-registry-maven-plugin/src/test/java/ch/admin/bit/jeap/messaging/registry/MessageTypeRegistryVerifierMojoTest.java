@@ -59,7 +59,10 @@ class MessageTypeRegistryVerifierMojoTest {
             "validSystemDefinedGlobally",
             "commonData",
             "validCommandMinorVersionUpdate",
-            "publishingSystem"
+            "publishingSystem",
+            "usedImportWithComment",
+            "commentedTypes",
+            "commentedCommonTypes"
     })
     @InjectMojo(goal = "registry", pom = "src/test/resources/valid/pom.xml")
     void shouldExecuteSuccessfully(String resourceDir, Mojo target, @TempDir File tmpDir) throws Exception {

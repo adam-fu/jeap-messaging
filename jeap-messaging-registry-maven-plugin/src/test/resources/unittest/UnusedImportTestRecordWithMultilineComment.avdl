@@ -1,0 +1,10 @@
+@namespace("ch.admin.test")
+protocol UnusedImportTestRecordWithMultilineComment {
+  import idl "UnusedImportTestUnused.avdl";
+
+  record /* explanation
+            spanning lines */ UnusedImportTestRecordWithMultilineCommentEvent {
+    UnusedImportTestUnusedReferences references;
+    string domainEventVersion;
+  }
+}

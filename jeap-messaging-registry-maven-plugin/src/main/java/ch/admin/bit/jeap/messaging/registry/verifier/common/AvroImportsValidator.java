@@ -2,12 +2,11 @@ package ch.admin.bit.jeap.messaging.registry.verifier.common;
 
 import ch.admin.bit.jeap.messaging.avro.plugin.compiler.ImportClassLoader;
 import ch.admin.bit.jeap.messaging.avro.plugin.validator.ValidationResult;
+import ch.admin.bit.jeap.messaging.registry.verifier.AvroIdlTokenizer;
 import ch.admin.bit.jeap.messaging.registry.verifier.ValidationContext;
 import org.apache.maven.plugin.logging.Log;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -23,9 +22,11 @@ public class AvroImportsValidator {
             "string", "int", "long", "float", "double", "boolean", "bytes", "null",
             "record", "enum", "protocol", "fixed", "union", "namespace", "import"
     );
-    private static final Pattern IMPORT_PATTERN = Pattern.compile("^\\s*import\\s+idl\\s+\"([^\"]+)\";\\s*(\\/\\/.*)?$");
+    private static final Pattern IMPORT_PATTERN = Pattern.compile("^\\s*import\\s+idl\\s+\"([^\"]+)\";\\s*$");
     private static final Pattern TYPE_REFERENCE_PATTERN = Pattern.compile("\\b((?:[A-Z][A-Za-z0-9_]*\\.)*[A-Z][A-Za-z0-9_]*)\\b"); // NOSONAR - can lead to a stack overflow for large inputs --> We don't have large inputs
-    private static final Pattern COMMENT_PATTERN = Pattern.compile("^\\s*//|^\\s*\\*|^\\s*/\\*|\\*/");
+    // The declaration may be preceded by an annotation on the same line, and the name may follow after any
+    // whitespace (e.g. a multi-line comment), so only the keyword itself is matched
+    private static final Pattern RECORD_DECLARATION_PATTERN = Pattern.compile("\\brecord\\b");
 
     private final Log log;
     private final AvroFileInfoCollector fileInfoCollector;
@@ -118,13 +119,10 @@ public class AvroImportsValidator {
     // Method to parse imports from an IDL file
     private Set<String> collectImports(File file) throws IOException {
         Set<String> imports = new HashSet<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                Matcher matcher = IMPORT_PATTERN.matcher(line.trim());
-                if (matcher.find()) {
-                    imports.add(matcher.group(1));
-                }
+        for (String line : readWithoutComments(file).split("\\R")) {
+            Matcher matcher = IMPORT_PATTERN.matcher(line.trim());
+            if (matcher.find()) {
+                imports.add(matcher.group(1));
             }
         }
         return imports;
@@ -134,40 +132,46 @@ public class AvroImportsValidator {
         Set<String> typeReferences = new LinkedHashSet<>();
         boolean insideRecord = false;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
+        for (String line : readWithoutComments(file).split("\\R")) {
+            line = line.trim();
 
-                if (COMMENT_PATTERN.matcher(line).find()) {
-                    continue;
-                }
+            if (line.isEmpty()) {
+                continue;
+            }
 
-                if (line.startsWith("record ")) {
-                    insideRecord = true;
-                }
-                if (insideRecord && line.endsWith("}") && !line.contains("{")) {
-                    insideRecord = false;
-                    continue;
-                }
+            if (RECORD_DECLARATION_PATTERN.matcher(line).find()) {
+                insideRecord = true;
+            }
+            if (insideRecord && line.endsWith("}") && !line.contains("{")) {
+                insideRecord = false;
+                continue;
+            }
 
-                // Skip lines inside an enum block
-                if (!insideRecord) {
-                    continue;
-                }
+            // Skip lines inside an enum block
+            if (!insideRecord) {
+                continue;
+            }
 
-                // Process all lines to capture valid types
-                Matcher matcher = TYPE_REFERENCE_PATTERN.matcher(line);
-                while (matcher.find()) {
-                    String potentialType = matcher.group(1);
-                    if (!isReservedKeyword(potentialType)) {
-                        typeReferences.add(potentialType);
-                    }
+            // Process all lines to capture valid types
+            Matcher matcher = TYPE_REFERENCE_PATTERN.matcher(line);
+            while (matcher.find()) {
+                String potentialType = matcher.group(1);
+                if (!isReservedKeyword(potentialType)) {
+                    typeReferences.add(potentialType);
                 }
             }
         }
 
         return typeReferences;
+    }
+
+    /**
+     * Reads an IDL file without comments, keeping the surrounding code and the line structure intact.
+     * Comments must not be dropped per line: a line such as {@code BeanReference origin; /* comment *}{@code /}
+     * would otherwise lose the reference to the imported type and be reported as an unused import.
+     */
+    private String readWithoutComments(File file) throws IOException {
+        return AvroIdlTokenizer.stripComments(file);
     }
 
     private boolean isReservedKeyword(String word) {
