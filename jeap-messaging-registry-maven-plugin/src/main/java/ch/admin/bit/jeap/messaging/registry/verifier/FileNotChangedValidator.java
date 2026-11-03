@@ -137,14 +137,30 @@ public class FileNotChangedValidator {
 
     private static ValidationResult schemaFileNotChanged(File oldFile, File newFile, String trunkBranchName) {
         try {
-            if (FileUtils.checksumCRC32(newFile) != FileUtils.checksumCRC32(oldFile)) {
+            if (isAvroIdlFile(newFile) ? idlDefinitionChanged(oldFile, newFile) : checksumChanged(oldFile, newFile)) {
                 return ValidationResult.fail(String.format("File %s has changed compared to %s. " +
                         "You are not allowed to change this file", newFile.getAbsolutePath(), trunkBranchName));
             }
         } catch (IOException e) {
-            return ValidationResult.fail(String.format("Could not compute checksum: %s", e.getMessage()));
+            return ValidationResult.fail(String.format("Could not compare files: %s", e.getMessage()));
         }
         return ValidationResult.ok();
+    }
+
+    private static boolean isAvroIdlFile(File file) {
+        return file.getName().endsWith(".avdl");
+    }
+
+    private static boolean checksumChanged(File oldFile, File newFile) throws IOException {
+        return FileUtils.checksumCRC32(newFile) != FileUtils.checksumCRC32(oldFile);
+    }
+
+    /**
+     * Compares Avro IDL files by their schema definition, ignoring comments and formatting. Only changes
+     * that affect the generated schema are considered to be a change of an already published file.
+     */
+    private static boolean idlDefinitionChanged(File oldFile, File newFile) throws IOException {
+        return !AvroIdlTokenizer.tokenize(oldFile).equals(AvroIdlTokenizer.tokenize(newFile));
     }
 
     private static ValidationResult alreadyDefinedVersionInDescriptorFileNotChanged(File oldFile, File newFile){

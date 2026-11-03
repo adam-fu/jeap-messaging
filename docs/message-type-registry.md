@@ -17,6 +17,10 @@ it. `/schema` holds JSON schemas for descriptors (usable in the IDE). Shared rec
 `/descriptor/<system>/_common` or `/descriptor/_common`; a record checked into master must never be
 changed or deleted (create a new record with a new name, e.g. a version suffix).
 
+The immutability check compares the schema definition of an existing `.avdl` file: comments and
+formatting may be changed, anything that alters the generated schema (records, fields, types, default
+values, annotations, imports) is rejected.
+
 ## Descriptor data model
 
 Top-level descriptor fields:

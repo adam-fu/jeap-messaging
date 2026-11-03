@@ -40,6 +40,30 @@ class AvroImportsValidatorTest {
     }
 
     @Test
+    void checkUnusedImports_resultSuccessful_whenRecordDeclarationContainsTab() throws Exception {
+        File file = new File("src/test/resources/unittest/UnusedImportTestRecordWithTab.avdl");
+
+        ValidationResult result = validator.validate(file, new ImportClassLoader(new File("src/test/resources/unittest/")));
+        assertTrue(result.isValid());
+    }
+
+    @Test
+    void checkUnusedImports_resultSuccessful_whenRecordDeclarationContainsMultilineComment() throws Exception {
+        File file = new File("src/test/resources/unittest/UnusedImportTestRecordWithMultilineComment.avdl");
+
+        ValidationResult result = validator.validate(file, new ImportClassLoader(new File("src/test/resources/unittest/")));
+        assertTrue(result.isValid());
+    }
+
+    @Test
+    void checkUnusedImports_resultSuccessful_whenRecordDeclarationFollowsAnnotation() throws Exception {
+        File file = new File("src/test/resources/unittest/UnusedImportTestRecordAfterAnnotation.avdl");
+
+        ValidationResult result = validator.validate(file, new ImportClassLoader(new File("src/test/resources/unittest/")));
+        assertTrue(result.isValid());
+    }
+
+    @Test
     void checkUnusedImports_resultNotSuccessful_whenUnusedImport() throws Exception {
         File file = new File("src/test/resources/unittest/UnusedImportTestUnused.avdl");
 
